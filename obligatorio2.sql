@@ -240,20 +240,44 @@ INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (9, 11, no
 
 
 -- 8) Obtener el documento y nombre 
---de los contactos que alquilaron la mayor cantidad de equipos distintos. 
---Considerar solamente contactos que hayan contratado proyectos que finalizaron dentro de los últimos 30 días
-SELECT C.Documento, C.Nombre, COUNT(DISTINCT A.Id) AS Cantidad
-FROM Contacto C
-INNER JOIN Alquila A ON A.Documento = C.Documento
-INNER JOIN Contrata Co ON Co.Documento = C.Documento
-INNER JOIN Proyecto P ON P.NroProy = Co.NroProy
-WHERE P.FFin > now() - interval 30 day
+-- de los contactos que alquilaron la mayor cantidad de equipos distintos. 
+-- Considerar solamente contactos que hayan contratado proyectos que finalizaron dentro de los últimos 30 días
+
+-- Procedimiento:
+-- 1) selecciono la mayor cantidad de equipos distintos que alquilaron los contactos:
+SELECT MAX(Cantidad)
+FROM (SELECT COUNT(DISTINCT A.Id) AS Cantidad
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy
+WHERE P.FFinalizacion > now() - interval 30 day
+GROUP BY C.Documento, C.Nombre) AS T
+
+
+-- 2) selecciono los contactos que hayan alquilado esa cantidad de equipos distintos, osea, uso HAVING 
+-- 3) Fijarme que la fecha de finalizacion del proyecto este entre los ultimos 30 dias
+SELECT C.Documento, C.Nombre
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy
+WHERE P.FFinalizacion > now() - interval 30 day
 GROUP BY C.Documento, C.Nombre
-HAVING COUNT(DISTINCT A.Id) = (SELECT MAX(Cantidad) FROM (SELECT COUNT(DISTINCT A.Id) AS Cantidad FROM Contacto C INNER JOIN Alquila A ON A.Documento = C.Documento INNER JOIN Contrata Co ON Co.Documento = C.Documento INNER JOIN Proyecto P ON P.NroProy = Co.NroProy WHERE P.FFin > now() - interval 30 day GROUP BY C.Documento, C.Nombre) AS T)
+HAVING COUNT(DISTINCT A.Id) = (SELECT MAX(Cantidad)
+FROM (SELECT COUNT(DISTINCT A.Id) AS Cantidad
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy
+WHERE P.FFinalizacion > now() - interval 30 day
+GROUP BY C.Documento, C.Nombre) AS T)
 
 -- datos de prueba
+-- contacto: 
 INSERT INTO Obligatorio.Contacto (Documento, Email, Nombre, Telefono, Tipo) VALUES (12, 'Contacto12@gmail', 'Contacto12','12121212', 'Ingeniero');
 
+-- proyectos que hayan finalizado en los ultimos 30 dias
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (14, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (15, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (16, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
@@ -262,6 +286,7 @@ INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) V
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (19, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (20, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
 
+-- contacto 12 alquila en total 20 proyectos: (el máximo que se ha alquilado)
 INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (14, 12, now() - interval 6 month, now() - interval 1 day);
 INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (15, 12, now() - interval 6 month, now() - interval 1 day);
 INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (16, 12, now() - interval 6 month, now() - interval 1 day);
@@ -269,7 +294,11 @@ INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (17, 12, n
 INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (18, 12, now() - interval 6 month, now() - interval 1 day);
 INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (19, 12, now() - interval 6 month, now() - interval 1 day);
 INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (20, 12, now() - interval 6 month, now() - interval 1 day);
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (31, 12, now() - interval 6 month, now() - interval 1 day);
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (32, 12, now() - interval 6 month, now() - interval 1 day);
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (33, 12, now() - interval 6 month, now() - interval 1 day);
 
+-- contacto 12 contrata 
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (14, 12);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (15, 12);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (16, 12);
@@ -279,58 +308,3 @@ INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (19, 12);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (20, 12);
 
 
-INSERT INTO Obligatorio.Contacto (Documento, Email, Nombre, Telefono, Tipo) VALUES (13, 'Contacto12@gmail', 'Contacto12','12121212', 'Ingeniero');
-
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (21, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (22, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (23, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (24, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (25, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (26, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (27, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (28, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (29, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (30, 'proy0', 'proy0proy0proy0', now() - interval 6 day);
-
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (21, 13, now() - interval 6 month, now() - interval 1 day);
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (22, 13, now() - interval 6 month, now() - interval 1 day);
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (23, 13, now() - interval 6 month, now() - interval 1 day);
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (24, 13, now() - interval 6 month, now() - interval 1 day);
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (25, 13, now() - interval 6 month, now() - interval 1 day);
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (26, 13, now() - interval 6 month, now() - interval 1 day);
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (27, 13, now() - interval 6 month, now() - interval 1 day);
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (28, 13, now() - interval 6 month, now() - interval 1 day);
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (29, 13, now() - interval 6 month, now() - interval 1 day);
-INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (30, 13, now() - interval 6 month, now() - interval 1 day);
-
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (21, 13);
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (22, 13);
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (23, 13);
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (24, 13);
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (25, 13);
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (26, 13);
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (27, 13);
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (28, 13);
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (29, 13);
-INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (30, 13);
-
--- 8) Obtener el documento y nombre 
---de los contactos que alquilaron la mayor cantidad de equipos distintos. 
---Considerar solamente contactos que hayan contratado proyectos que finalizaron dentro de los últimos 30 días
-
--- NO ESTA FUNCIONANDO AUNNNNN
-
-SELECT C.Documento, C.Nombre, COUNT(DISTINCT A.Id) AS Cantidad -- me guardo en la variable Cantidad, los distintos A.Id que cumplen con esas condiciones
-FROM Obligatorio.Contacto C
-INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
-INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento
-INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy
-WHERE P.FFinalizacion > now() - interval 30 day
-GROUP BY C.Documento, C.Nombre
-HAVING COUNT(A.Id) = (SELECT MAX(Cantidad) 
-FROM (SELECT COUNT(DISTINCT A.Id) AS Cantidad 
-FROM Obligatorio.Contacto C 
-INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento 
-INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento 
-INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy 
-WHERE P.FFinalizacion > now() - interval 30 day GROUP BY C.Documento, C.Nombre) AS T)
