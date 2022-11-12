@@ -245,16 +245,6 @@ INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (9, 11, no
 
 -- Procedimiento:
 -- 1) selecciono la mayor cantidad de equipos distintos que alquilaron los contactos:
-SELECT MAX(Cantidad)
-FROM (SELECT COUNT(DISTINCT A.Id) AS Cantidad
-FROM Obligatorio.Contacto C
-INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
-INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento
-INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy
-WHERE P.FFinalizacion > now() - interval 30 day
-GROUP BY C.Documento, C.Nombre) AS T
-
-
 -- 2) selecciono los contactos que hayan alquilado esa cantidad de equipos distintos, osea, uso HAVING 
 -- 3) Fijarme que la fecha de finalizacion del proyecto este entre los ultimos 30 dias
 SELECT C.Documento, C.Nombre
