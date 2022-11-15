@@ -8,6 +8,8 @@ FechaAdquirido timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 Categoria ENUM('Vial', 'Construcción', 'Hidráulica', 'Terreno')
 )
 
+
+
 CREATE TABLE Obligatorio.Alquila (
 Id INTEGER,
 Documento INTEGER,
@@ -16,7 +18,12 @@ FFin timestamp,
 PRIMARY KEY (Id, Documento, FInicio)
 )
 
--- casos de prueba
+
+
+
+
+
+-- datos de prueba
 INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (0, 'equipo0', 'Producción', now(), 'Vial');
 INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (1, 'equipo1', 'Producción', now() - interval 1 month, 'Vial');
 INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (2, 'equipo2', 'Service', now() - interval 2 month, 'Construccion');
@@ -27,6 +34,15 @@ INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) V
 INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (7, 'equipo7', 'Desafectado', now() - interval 5 month, 'Terreno');
 INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (8, 'equipo8', 'Desafectado', now() - interval 12 month, 'Construccion');
 INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (9, 'equipo9', 'Desafectado', now() - interval 6 month, 'Terreno');
+
+CREATE TABLE Obligatorio.Contacto (
+Documento INTEGER,
+Email VARCHAR(20),
+Nombre VARCHAR(20),
+Telefono VARCHAR(20),
+Tipo ENUM('Cliente', 'Tecnico', 'Ingeniero'),
+PRIMARY KEY (Documento)
+)
 
 INSERT INTO Obligatorio.Contacto (Documento, Email, Nombre, Telefono, Tipo) VALUES (0, 'Contacto0@gmail', 'Contacto0', '00000','Tecnico');
 INSERT INTO Obligatorio.Contacto (Documento, Email, Nombre, Telefono, Tipo) VALUES (1, 'Contacto1@gmail', 'Contacto1','11111', 'Cliente');
@@ -50,6 +66,16 @@ INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (7, 7, now
 INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (8, 8, now() - interval 3 month, now() - interval 1 month);
 INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (9, 9, now() - interval 4 month, now() - interval 1 month);
 
+
+CREATE TABLE Obligatorio.Proyecto (
+NroProy INTEGER,
+Nombre VARCHAR(20),
+Descripcion VARCHAR(20),
+FFinalizacion timestamp
+PRIMARY KEY (NroProy)
+)
+
+
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (0, 'proy0', 'proy0proy0proy0', now() - interval 6 month);
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (1, 'proy1', 'proy1proy1proy1', now() - interval 5 month);
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (2, 'proy2', 'proy2proy2proy2', now() - interval 4 month);
@@ -61,6 +87,12 @@ INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) V
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (8, 'proy8', 'proy8proy8proy8', now() - interval 2 month);
 INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (9, 'proy9', 'proy9proy9proy9', now() - interval 1 month);
 
+CREATE TABLE Obligatorio.Contrata (
+NroProy INTEGER,
+Documento INTEGER
+PRIMARY KEY (NroProy, Documento)
+)
+
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (0, 0);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (1, 1);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (2, 2);
@@ -71,6 +103,14 @@ INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (6, 6);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (7, 7);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (8, 8);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (9, 9);
+
+CREATE TABLE Obligatorio.Contrata (
+NroProy INTEGER,
+IdTarea INTEGER,
+Descripcion VARCHAR(20),
+FRealizacion timestamp
+PRIMARY KEY (NroProy, IdTarea)
+)
 
 INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (0, 0, 'tarea0', now() - interval 1 month);
 INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (2, 2, 'tarea2', now() - interval 2 month);
@@ -86,8 +126,22 @@ INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALU
 
 -- 1)
 -- Obtener para los equipos que sean de categoría vial, el nombre de los contactos que los
---alquilaron. Considerar aquellos equipos que fueron alquilados al menos una vez y dicho
---alquiler haya iniciado en junio de 2022.
+-- alquilaron. Considerar aquellos equipos que fueron alquilados al menos una vez y dicho
+-- alquiler haya iniciado en junio de 2022.
+
+--OPCION 1, ME TRAIGO TODOS LOS CONTACTOS
+SELECT C.Nombre
+FROM Obligatorio.Equipo E, Obligatorio.Alquila A, Obligatorio.Contacto C
+WHERE E.Id = A.Id
+AND A.Documento = C.Documento
+AND E.Categoria = 'Vial'
+AND E.Id IN (
+    SELECT A.Id
+    FROM Obligatorio.Alquila A
+    WHERE MONTH(A.FInicio) = 6 AND YEAR(A.FInicio) = 2022
+)
+
+--OPCION 2, ME TRAIGO SOLO LOS CONTACTOS Q HAYAN ALQUILADO EN ESE MES Y AÑO
 SELECT C.Nombre
 FROM Contacto C 
 INNER JOIN Alquila A ON A.Documento = C.Documento
@@ -126,6 +180,7 @@ INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (2, 4, now
 
 -- TODO: PREGUNTARLE, MOSTRARLE LAS DOS OPCIONES Y VER SI DE LA SEGUNDA HAY UNA MEJOR MANERA.
 -- RARO PORQ SI HAY MAS DE UNA SOLO VA A TRAER 1 POR EL LIMIT 1, PREGUNTA: no entiendo como mostrar la primera tarea pero si hay mas de una mostrarlas todas?
+
 -- SELECT T.Descripcion, T.FRealizacion, DAY(T.FRealizacion) as dia, MONTH(T.FRealizacion) as mes
 -- FROM Tarea T
 -- INNER JOIN Proyecto P ON P.NroProy = T.NroProy
@@ -160,14 +215,15 @@ INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALU
 -- 4)
 -- Obtener el documento y nombre de los contactos que hayan contratado más de un proyecto,
 -- así como también los números de los proyectos que contrató. Considerar aquellos proyectos
--- que aún no estén terminados.
+-- que aún no estén terminados. 
+-- TODO: CONSIDERO TODOS LOS PROYECTOS, NO SOLOS LOS QUE NO ESTEN TERMINADOS
 
 -- PREGUNTA: como mostramos los nros de proyectos de cada uno?
 SELECT C.Documento, C.Nombre
 FROM Obligatorio.Contacto C
 INNER JOIN Obligatorio.Contrata CC ON CC.Documento = C.Documento
 INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CC.NroProy
-WHERE P.FFinalizacion IS NULL
+-- WHERE P.FFinalizacion IS NULL 
 GROUP BY C.Documento, C.Nombre
 HAVING COUNT(CC.NroProy) > 1
 
@@ -211,10 +267,20 @@ INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (2, 9, now
 -- pertenecen. Para las tareas realizadas, mostrar la fecha de realización y para aquellas
 -- pendientes, mostrar el texto “Pendiente de realización”. Considerar aquellos proyectos que tengan al menos 3 tareas
 
-SELECT T.IdTarea, T.Descripcion, P.Nombre, IF(T.FRealizacion IS NULL, 'Pendiente de realizacion', T.FRealizacion) AS FRealizacion
+
+
+-- TODO: CASTEAR PARA Q LO Q DEVUELVO SEA UN STRING
+SELECT T.IdTarea, T.Descripcion, P.Nombre, CAST(T.FRealizacion) AS Fecha 
 FROM Obligatorio.Tarea T
 INNER JOIN Obligatorio.Proyecto P ON P.NroProy = T.NroProy
-WHERE P.NroProy IN (SELECT NroProy FROM Obligatorio.Tarea GROUP BY NroProy HAVING COUNT(*) >= 3)
+WHERE Fecha IS NOT NULL
+AND P.NroProy IN (SELECT NroProy FROM Obligatorio.Tarea GROUP BY NroProy HAVING COUNT(*) >= 3)
+UNION
+SELECT T.IdTarea, T.Descripcion, P.Nombre, 'Pendiente de realizacion' AS Fecha 
+FROM Obligatorio.Tarea T
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = T.NroProy
+WHERE Fecha IS NULL
+AND P.NroProy IN (SELECT NroProy FROM Obligatorio.Tarea GROUP BY NroProy HAVING COUNT(*) >= 3)
 
 -- daatos de prueba
 INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (2, 10, 'unfinished1', NULL);
@@ -224,11 +290,12 @@ INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALU
 -- 7)
 -- Obtener para cada ingeniero, la cantidad de equipos que alquiló. Considerar únicamente los tipos “Construcción” y “Terreno”.
 
-SELECT C.Documento, C.Nombre, COUNT(*) AS Cantidad
+SELECT C.Documento, C.Nombre, COUNT(A.Id) AS Cantidad
 FROM Contacto C
 INNER JOIN Alquila A ON A.Documento = C.Documento
 INNER JOIN Equipo E ON E.Id = A.Id
-WHERE C.Tipo = 'Ingeniero' AND E.Categoria IN ('Construccion', 'Terreno')
+WHERE C.Tipo = 'Ingeniero' 
+AND E.Categoria IN ('Construccion', 'Terreno')
 GROUP BY C.Documento, C.Nombre
 
 -- datos de prueba
@@ -247,6 +314,25 @@ INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (9, 11, no
 -- 1) selecciono la mayor cantidad de equipos distintos que alquilaron los contactos:
 -- 2) selecciono los contactos que hayan alquilado esa cantidad de equipos distintos, osea, uso HAVING 
 -- 3) Fijarme que la fecha de finalizacion del proyecto este entre los ultimos 30 dias
+
+-- NO PUEDO HACER SELECT ADENTRO DEL FROM
+-- SELECT C.Documento, C.Nombre
+-- FROM Obligatorio.Contacto C
+-- INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+-- INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento
+-- INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy
+-- WHERE P.FFinalizacion > now() - interval 30 day
+-- GROUP BY C.Documento, C.Nombre
+-- HAVING COUNT(DISTINCT A.Id) = (SELECT MAX(Cantidad)
+-- FROM (SELECT COUNT(DISTINCT A.Id) AS Cantidad
+-- FROM Obligatorio.Contacto C
+-- INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+-- INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento
+-- INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy
+-- WHERE P.FFinalizacion > now() - interval 30 day
+-- GROUP BY C.Documento, C.Nombre) AS T)
+
+
 SELECT C.Documento, C.Nombre
 FROM Obligatorio.Contacto C
 INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
@@ -254,14 +340,14 @@ INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento
 INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy
 WHERE P.FFinalizacion > now() - interval 30 day
 GROUP BY C.Documento, C.Nombre
-HAVING COUNT(DISTINCT A.Id) = (SELECT MAX(Cantidad)
-FROM (SELECT COUNT(DISTINCT A.Id) AS Cantidad
+HAVING COUNT(DISTINCT A.Id) = (SELECT MAX(COUNT(DISTINCT A.Id))
 FROM Obligatorio.Contacto C
 INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
 INNER JOIN Obligatorio.Contrata Co ON Co.Documento = C.Documento
 INNER JOIN Obligatorio.Proyecto P ON P.NroProy = Co.NroProy
 WHERE P.FFinalizacion > now() - interval 30 day
-GROUP BY C.Documento, C.Nombre) AS T)
+GROUP BY C.Documento, C.Nombre
+
 
 -- datos de prueba
 -- contacto: 
@@ -296,5 +382,183 @@ INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (17, 12);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (18, 12);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (19, 12);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (20, 12);
+
+-- 10) 
+-- Obtener para las categorías de equipo vial y construcción los contactos que alquilaron equipos
+-- de dichas categorías y la cantidad total de alquileres que realizó dicho contacto para esa
+-- categoría. Obtener el porcentaje que representa esta cantidad sobre el total de alquileres para
+-- cada categoría solicitada. Además, obtener el nombre del proyecto en el cual se realizaron la
+-- mayor cantidad de tareas dentro de cada categoría solicitada (si hay más de un proyecto con
+-- la mayor cantidad de tareas, se deben listar todos ellos).
+
+
+
+--casos de prueba
+-- contacto 22 es el que va a alquilar
+INSERT INTO Obligatorio.Contacto (Documento, Email, Nombre, Telefono, Tipo) VALUES (22, 'Contacto11@gmail', 'PruebaEj10!!!!','1111111111', 'Ingeniero');
+
+-- 4 equipos de categoria vial 
+INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (200, '200200', 'Producción', now(), 'Vial');
+INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (201, '201201', 'Producción', now() - interval 1 month, 'Vial');
+INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (202, '202202', 'Producción', now(), 'Vial');
+INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (203, '203203', 'Producción', now() - interval 1 month, 'Vial');
+
+-- contacto 22 alquila 4 equipos de categoria vial
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (200, 22, now() - interval 6 month, now() - interval 1 day);
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (201, 22, now() - interval 6 month, now() - interval 1 day);
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (202, 22, now() - interval 6 month, now() - interval 1 day);
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (203, 22, now() - interval 6 month, now() - interval 1 day);
+
+
+-- ME GUSTAAAAAAAA, FUNCIONA LA PRIMERA PARTE Y A ANA BARBITTA CREO Q LE GUSTO
+SELECT E.Categoria, C.Documento, C.Nombre, COUNT(A.Id) AS Cantidad,
+CASE
+    WHEN E.Categoria = 'Vial' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo   WHERE Categoria = 'Vial'))
+WHEN E.Categoria = 'Construccion' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo 
+WHERE Categoria = 'Construccion'))
+END AS Porcentaje
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+WHERE E.Categoria = 'Vial' OR E.Categoria = 'Construccion'
+GROUP BY C.Documento, C.Nombre, E.Categoria
+
+
+-- INTENTO DE SEGUNDA PARTE
+HAVING COUNT(DISTINCT T.IdTarea) = (SELECT MAX(Cantidad) --de todas esas filas, me quedo con el maximo count
+FROM (SELECT COUNT(DISTINCT T.IdTarea) AS Cantidad -- cuento las tareas que tiene cada proyecto, filtrando porque la categoria del equipo sea vial
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy
+INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy
+WHERE E.Categoria = 'Vial'
+GROUP BY P.Nombre) AS T)
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+-- NUEVA DBBBBB CASOS DE PRUEBA:
+INSERT INTO Obligatorio.Contacto (Documento, Email, Nombre, Telefono, Tipo) VALUES (1, 'Contacto11@gmail', 'Contacto11', '1111111111','Ingeniero');
+
+INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (2, 'equipo2Constru', 'Producción', now(), 'Construccion');
+INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (1, 'equipo1', 'Producción', now() - interval 1 month, 'Vial');
+
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (2, 1, now() - interval 6 month, now() - interval 1 month);
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (1, 1, now() - interval 6 month, now() - interval 1 month);
+
+INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (0, 'proy0', 'proy0proy0proy0', now() - interval 6 month);
+
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (0, 0, 'tarea0', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (0, 1, 'tarea1', now() - interval 1 month);
+
+INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (0, 1);
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+-- 10) 
+-- Obtener para las categorías de equipo vial y construcción los contactos que alquilaron equipos
+-- de dichas categorías y la cantidad total de alquileres que realizó dicho contacto para esa
+-- categoría. Obtener el porcentaje que representa esta cantidad sobre el total de alquileres para
+-- cada categoría solicitada. Además, obtener el nombre del proyecto en el cual se realizaron la
+-- mayor cantidad de tareas dentro de cada categoría solicitada (si hay más de un proyecto con
+-- la mayor cantidad de tareas, se deben listar todos ellos).
+
+-- AMBAS PARTES FUNCIONANDO POR SEPARADO, TENGO Q UNIRLAS
+SELECT E.Categoria, C.Documento, C.Nombre, COUNT(A.Id) AS Cantidad,
+CASE
+WHEN E.Categoria = 'Vial' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo WHERE Categoria = 'Vial'))
+WHEN E.Categoria = 'Construccion' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo WHERE Categoria = 'Construccion'))
+END AS Porcentaje
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+WHERE E.Categoria = 'Vial' OR E.Categoria = 'Construccion'
+GROUP BY C.Documento, C.Nombre  
+
+HAVING COUNT(DISTINCT T.IdTarea) = (SELECT MAX(Cantidad)
+FROM (SELECT COUNT(DISTINCT T.IdTarea) AS Cantidad 
+FROM Obligatorio.Contacto C -- por cada contacto
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento --tiene q haber alquilado un equipo de categoria vial
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id -- equipo tiene q estar alquilado por el contact
+INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento -- ese mismo contact tiene q haber contratado un proyecto
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy -- proyecto contratado por el contacto 
+INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy -- las tareas del proyecto q voy a contar 
+WHERE E.Categoria = 'Vial' -- la categoria del equipo tiene q ser Vial 
+GROUP BY P.Nombre) AS H)
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 300, '200200', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 301, '201201', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 302, '202202', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 303, '200200', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 304, '201201', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 305, '202202', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 306, '200200', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 307, '201201', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 308, '202202', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 309, '202202', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 310, '202202', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 311, '202202', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 312, '202202', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 313, '202202', now() - interval 1 month);
+
+INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (8, 'equipo8', 'Desafectado', now() - interval 12 month, 'Construccion');
+
+
+
+-- 9)
+-- Obtener el nombre y la fecha de adquisición de los equipos que tuvieron la mayor cantidad de
+-- alquileres. Además, dichos equipos deben haber sido alquilados por algún contacto que haya
+-- contratado la menor cantidad de proyectos.
+
+SELECT e.Nombre, e.FechaAdquirido 
+FROM Obligatorio.Equipo e
+INNER JOIN Obligatorio.Alquila a ON e.Id = a.Id
+WHERE e.Id IN (SELECT a.Id
+               FROM Obligatorio.Alquila A
+               GROUP BY a.Id
+               HAVING COUNT(*) = (SELECT MAX (COUNT(*))
+                                  FROM Obligatorio.Alquila A
+                                  GROUP BY A.Id))
+AND a.Documento IN (SELECT c.Documento
+                    FROM Obligatorio.Contrata c 
+                 -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
+                    GROUP BY c.Documento 
+                    HAVING COUNT(*) = (SELECT MIN (COUNT(*))
+                                       FROM Obligatorio.Contrata c
+                                      -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
+                                       GROUP BY c.Documento))
+
+
+
+SELECT e.Nombre, e.FechaAdquirido 
+FROM Obligatorio.Equipo e
+INNER JOIN Obligatorio.Alquila a ON e.Id = a.Id
+WHERE e.Id IN (SELECT a.Id
+               FROM Obligatorio.Alquila A
+               GROUP BY a.Id
+               HAVING COUNT(*) = (SELECT MAX(COUNT(*)), a.Id as idMax
+                                  FROM Obligatorio.Alquila A
+                                  GROUP BY a.Id))
+AND a.Documento IN (SELECT c.Documento
+                    FROM Obligatorio.Contrata c 
+                 -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
+                    GROUP BY c.Documento 
+                    HAVING COUNT(*) = (SELECT MIN (COUNT(*))
+                                       FROM Obligatorio.Contrata c
+                                      -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
+                                       GROUP BY c.Documento))                                       
+
+
 
 
