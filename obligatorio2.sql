@@ -495,7 +495,34 @@ GROUP BY P.Nombre) AS H)
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+-- 10) 
+-- Obtener para las categorías de equipo vial y construcción los contactos que alquilaron equipos
+-- de dichas categorías y la cantidad total de alquileres que realizó dicho contacto para esa
+-- categoría. Obtener el porcentaje que representa esta cantidad sobre el total de alquileres para
+-- cada categoría solicitada. Además, obtener el nombre del proyecto en el cual se realizaron la
+-- mayor cantidad de tareas dentro de cada categoría solicitada (si hay más de un proyecto con
+-- la mayor cantidad de tareas, se deben listar todos ellos).
+
+-- intento de unirlas 
+SELECT E.Categoria, C.Documento, C.Nombre, COUNT(A.Id) AS Cantidad,
+CASE
+WHEN E.Categoria = 'Vial' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo WHERE Categoria = 'Vial'))
+WHEN E.Categoria = 'Construccion' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo WHERE Categoria = 'Construccion'))
+END AS Porcentaje
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento --tiene q haber alquilado un equipo de categoria vial
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id -- equipo tiene q estar alquilado por el contact
+INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento -- ese mismo contact tiene q haber contratado un proyecto
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy -- proyecto contratado por el contacto 
+INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy -- las tareas del proyecto q voy a contar 
+WHERE E.Categoria = 'Vial' OR E.Categoria = 'Construccion'
+GROUP BY C.Documento, C.Nombre  
+HAVING COUNT(DISTINCT T.IdTarea) = (SELECT MAX(COUNT(DISTINCT T.IdTarea))
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 300, '200200', now() - interval 1 month);
 INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (8, 301, '201201', now() - interval 1 month);
@@ -521,43 +548,34 @@ INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) V
 -- alquileres. Además, dichos equipos deben haber sido alquilados por algún contacto que haya
 -- contratado la menor cantidad de proyectos.
 
-SELECT e.Nombre, e.FechaAdquirido 
-FROM Obligatorio.Equipo e
-INNER JOIN Obligatorio.Alquila a ON e.Id = a.Id
-WHERE e.Id IN (SELECT a.Id
-               FROM Obligatorio.Alquila A
-               GROUP BY a.Id
-               HAVING COUNT(*) = (SELECT MAX (COUNT(*))
-                                  FROM Obligatorio.Alquila A
-                                  GROUP BY A.Id))
-AND a.Documento IN (SELECT c.Documento
-                    FROM Obligatorio.Contrata c 
-                 -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
-                    GROUP BY c.Documento 
-                    HAVING COUNT(*) = (SELECT MIN (COUNT(*))
-                                       FROM Obligatorio.Contrata c
-                                      -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
-                                       GROUP BY c.Documento))
+-- Me gusta esta, pero hay que probarla
+SELECT E.Nombre, E.FechaAdquirido, COUNT(A.Id) AS Cantidad
+FROM Obligatorio.Equipo E
+INNER JOIN Obligatorio.Alquila A ON A.Id = E.Id
+INNER JOIN Obligatorio.Contacto C ON C.Documento = A.Documento
+INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento
+GROUP BY E.Nombre, E.FechaAdquirido
+HAVING COUNT(A.Id) = (SELECT MAX(COUNT(A.Id)) FROM Obligatorio.Alquila A GROUP BY A.Id)
+AND COUNT(DISTINCT CT.NroProy) = (SELECT MIN(COUNT(DISTINCT CT.NroProy)) FROM Obligatorio.Contrata CT GROUP BY CT.Documento)
 
 
-
-SELECT e.Nombre, e.FechaAdquirido 
-FROM Obligatorio.Equipo e
-INNER JOIN Obligatorio.Alquila a ON e.Id = a.Id
-WHERE e.Id IN (SELECT a.Id
-               FROM Obligatorio.Alquila A
-               GROUP BY a.Id
-               HAVING COUNT(*) = (SELECT MAX(COUNT(*)), a.Id as idMax
-                                  FROM Obligatorio.Alquila A
-                                  GROUP BY a.Id))
-AND a.Documento IN (SELECT c.Documento
-                    FROM Obligatorio.Contrata c 
-                 -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
-                    GROUP BY c.Documento 
-                    HAVING COUNT(*) = (SELECT MIN (COUNT(*))
-                                       FROM Obligatorio.Contrata c
-                                      -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
-                                       GROUP BY c.Documento))                                       
+-- SELECT e.Nombre, e.FechaAdquirido 
+-- FROM Obligatorio.Equipo e
+-- INNER JOIN Obligatorio.Alquila a ON e.Id = a.Id
+-- WHERE e.Id IN (SELECT a.Id
+--                FROM Obligatorio.Alquila A
+--                GROUP BY a.Id
+--                HAVING COUNT(*) = (SELECT MAX (COUNT(*))
+--                                   FROM Obligatorio.Alquila A
+--                                   GROUP BY A.Id))
+-- AND a.Documento IN (SELECT c.Documento
+--                     FROM Obligatorio.Contrata c 
+--                  -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
+--                     GROUP BY c.Documento 
+--                     HAVING COUNT(*) = (SELECT MIN (COUNT(*))
+--                                        FROM Obligatorio.Contrata c
+--                                       -- INNER JOIN Obligatorio.Alquila a ON a.Documento = c.Documento
+--                                        GROUP BY c.Documento))
 
 
 
