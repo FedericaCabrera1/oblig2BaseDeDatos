@@ -1,4 +1,6 @@
 
+-- PREGUNTAS DE LETRA:
+-- Esta bien usar MONTH() y DAY() para obtener eso 
 -- script de algunas tablas
 CREATE TABLE Equipo (
 Id INTEGER PRIMARY KEY,
@@ -104,7 +106,7 @@ INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (7, 7);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (8, 8);
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (9, 9);
 
-CREATE TABLE Obligatorio.Contrata (
+CREATE TABLE Obligatorio.Tarea (
 NroProy INTEGER,
 IdTarea INTEGER,
 Descripcion VARCHAR(20),
@@ -142,12 +144,12 @@ AND E.Id IN (
 )
 
 --OPCION 2, ME TRAIGO SOLO LOS CONTACTOS Q HAYAN ALQUILADO EN ESE MES Y AÑO
-SELECT C.Nombre
-FROM Contacto C 
-INNER JOIN Alquila A ON A.Documento = C.Documento
-INNER JOIN Equipo E ON E.Id = A.Id 
-WHERE E.Categoria = 'Vial' 
-AND MONTH(A.FInicio) = 6 AND YEAR(A.FInicio) = 2022
+-- SELECT C.Nombre
+-- FROM Contacto C 
+-- INNER JOIN Alquila A ON A.Documento = C.Documento
+-- INNER JOIN Equipo E ON E.Id = A.Id 
+-- WHERE E.Categoria = 'Vial' 
+-- AND MONTH(A.FInicio) = 6 AND YEAR(A.FInicio) = 2022
 
 -- casos de prueba
 INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (0, 8, now() - interval 4 month, now() - interval 1 month);
@@ -165,7 +167,6 @@ INNER JOIN Alquila A ON A.Documento = C.Documento
 INNER JOIN Equipo E ON E.Id = A.Id 
 WHERE (E.Categoria = 'Construccion' OR E.Categoria = 'Vial')
 AND MONTH(A.FInicio) = 9 AND YEAR(A.FInicio) = 2022 AND DAY(A.FInicio) <= 15
--- TODO: Preguntar si solo importa la fecha de inicio o tmb la fecha de finalizacion tiene q ser dentro de la primera quincena de 2022
 AND MONTH(A.FFin) = 9 AND YEAR(A.FFin) = 2022 AND DAY(A.FFin) <= 15
 
 -- casos de prueba
@@ -437,7 +438,28 @@ WHERE E.Categoria = 'Vial'
 GROUP BY P.Nombre) AS T)
 
 
-
+-- ME GUSTAAAAAAAA, FUNCIONA LA PRIMERA PARTE Y A ANA BARBITTA CREO Q LE GUSTO
+SELECT E.Categoria, C.Documento, C.Nombre, COUNT(A.Id) AS Cantidad,
+CASE
+    WHEN E.Categoria = 'Vial' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo   WHERE Categoria = 'Vial'))
+WHEN E.Categoria = 'Construccion' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo 
+WHERE Categoria = 'Construccion'))
+END AS Porcentaje
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+WHERE E.Categoria = 'Vial' OR E.Categoria = 'Construccion'
+GROUP BY C.Documento, C.Nombre, E.Categoria
+HAVING COUNT(DISTINCT T.IdTarea) = (SELECT COUNT(DISTINCT T.IdTarea) AS Cantidad -- cuento las tareas que tiene cada proyecto, filtrando porque la categoria del equipo sea vial
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy
+INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy
+WHERE E.Categoria = 'Vial'
+ORDER BY Cantidad DESC
+LIMIT 1)
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -458,6 +480,17 @@ INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALU
 
 INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (0, 1);
 
+
+-- inserto nuevo contacto q va a contratar nuevo proyecto q va a tener 4 tareas, y q a la vez va a alquilar equipo de construccion
+INSERT INTO Obligatorio.Contacto (Documento, Email, Nombre, Telefono, Tipo) VALUES (2, 'Contacto22@gmail', 'Contacto22', '2222222','Ingeniero');
+INSERT INTO Obligatorio.Proyecto (NroProy, Nombre, Descripcion, FFinalizacion) VALUES (1, 'proy1', 'proy1proy1proy1', now() - interval 6 month);
+INSERT INTO Obligatorio.Equipo (Id, Nombre, Estado, FechaAdquirido, Categoria) VALUES (3, 'equipo3Constru', 'Producción', now(), 'Construccion');
+INSERT INTO Obligatorio.Contrata (NroProy, Documento) VALUES (1, 2);
+INSERT INTO Obligatorio.Alquila (Id, Documento, FInicio, FFin) VALUES (3, 2, now() - interval 6 month, now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (1, 2, 'tarea2', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (1, 3, 'tarea3', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (1, 4, 'tarea4', now() - interval 1 month);
+INSERT INTO Obligatorio.Tarea (NroProy, IdTarea, Descripcion, FRealizacion) VALUES (1, 5, 'tarea5', now() - interval 1 month);
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -493,6 +526,21 @@ WHERE E.Categoria = 'Vial' -- la categoria del equipo tiene q ser Vial
 GROUP BY P.Nombre) AS H)
 
 
+
+HAVING COUNT(DISTINCT T.IdTarea) = (SELECT MAX(Cantidad)
+FROM (
+SELECT COUNT(DISTINCT T.IdTarea) AS Cantidad 
+FROM Obligatorio.Contacto C -- por cada contacto
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento --tiene q haber alquilado un equipo de categoria vial
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id -- equipo tiene q estar alquilado por el contact
+INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento -- ese mismo contact tiene q haber contratado un proyecto
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy -- proyecto contratado por el contacto 
+INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy -- las tareas del proyecto q voy a contar 
+WHERE E.Categoria = 'Vial' -- la categoria del equipo tiene q ser Vial 
+GROUP BY P.Nombre
+ORDER BY Cantidad DESC
+LIMIT 1
+
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -520,6 +568,33 @@ INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy -- las tareas del proyec
 WHERE E.Categoria = 'Vial' OR E.Categoria = 'Construccion'
 GROUP BY C.Documento, C.Nombre  
 HAVING COUNT(DISTINCT T.IdTarea) = (SELECT MAX(COUNT(DISTINCT T.IdTarea))
+
+
+-- intento de unirlas y cambiar SELECT MAX(COUNT
+SELECT E.Categoria, C.Documento, C.Nombre, COUNT(A.Id) AS Cantidad,
+CASE
+WHEN E.Categoria = 'Vial' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo WHERE Categoria = 'Vial'))
+WHEN E.Categoria = 'Construccion' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo WHERE Categoria = 'Construccion'))
+END AS Porcentaje
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento --tiene q haber alquilado un equipo de categoria vial
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id -- equipo tiene q estar alquilado por el contact
+INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento -- ese mismo contact tiene q haber contratado un proyecto
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy -- proyecto contratado por el contacto 
+INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy -- las tareas del proyecto q voy a contar 
+WHERE E.Categoria = 'Vial' OR E.Categoria = 'Construccion'
+GROUP BY C.Documento, C.Nombre  
+HAVING COUNT(DISTINCT T.IdTarea) = (
+    SELECT COUNT(DISTINCT T.IdTarea) AS Cantidad 
+    FROM Obligatorio.Contacto C -- por cada contacto
+    INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento --tiene q haber alquilado un equipo de categoria vial
+    INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id -- equipo tiene q estar alquilado por el contact
+    INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento -- ese mismo contact tiene q haber contratado un proyecto
+    INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy -- proyecto contratado por el contacto 
+    INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy -- las tareas del proyecto q voy a contar 
+    ORDER BY Cantidad DESC
+    LIMIT 1
+)
 
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -580,3 +655,114 @@ AND COUNT(DISTINCT CT.NroProy) = (SELECT MIN(COUNT(DISTINCT CT.NroProy)) FROM Ob
 
 
 
+
+SELECT P.Nombre, E.Categoria, C.Documento, C.Nombre, COUNT(A.Id) AS Cantidad,
+CASE
+    WHEN E.Categoria = 'Vial' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo   WHERE Categoria = 'Vial'))
+WHEN E.Categoria = 'Construccion' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo 
+WHERE Categoria = 'Construccion'))
+END AS Porcentaje,
+
+CASE
+    WHEN E.Categoria = 'Vial' THEN 
+        SELECT P.Nombre
+        FROM Obligatorio.Contacto C
+        INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+        INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+        INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento
+        INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy
+        INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy
+        WHERE E.Categoria = 'Vial'
+        GROUP BY P.Nombre
+        HAVING COUNT(DISTINCT T.IdTarea) = (SELECT COUNT(DISTINCT T.IdTarea) AS Cantidad 
+        FROM Obligatorio.Contacto C
+        INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+        INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+        INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento
+        INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy
+        INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy
+        ORDER BY Cantidad DESC
+        LIMIT 1)
+WHEN E.Categoria = 'Construccion' THEN 
+        SELECT P.Nombre
+        FROM Obligatorio.Contacto C
+        INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+        INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+        INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento
+        INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy
+        INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy
+        WHERE E.Categoria = 'Construccion'
+        GROUP BY P.Nombre
+        HAVING COUNT(DISTINCT T.IdTarea) = (SELECT COUNT(DISTINCT T.IdTarea) AS Cantidad 
+        FROM Obligatorio.Contacto C
+        INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+        INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+        INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento
+        INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy
+        INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy
+        ORDER BY Cantidad DESC
+        LIMIT 1)
+END AS NombreProy
+FROM Obligatorio.Contacto C
+INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento
+INNER JOIN Obligatorio.Proyecto P ON P.NroProy = CT.NroProy
+INNER JOIN Obligatorio.Tarea T ON T.NroProy = P.NroProy
+
+
+
+
+-- QUERY 10 QUE PASO ANTONELLA
+SELECT P.Nombre, E.Categoria, C.Documento, C.Nombre as nombreCli, COUNT(A.Id) AS Cantidad,
+(CASE
+WHEN E.Categoria = 'Vial' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo   WHERE Categoria = 'Vial') group by id)
+WHEN E.Categoria = 'Construccion' THEN (COUNT(A.Id) * 100) / (SELECT COUNT(*) FROM Obligatorio.Alquila WHERE Id IN (SELECT Id FROM Obligatorio.Equipo
+WHERE Categoria = 'Construccion') group by id)
+END) AS Porcentaje, 
+(CASE
+   WHEN E.Categoria = 'Vial' THEN
+       (SELECT P.Nombre
+       FROM Obligatorio.Contacto C
+       INNER JOIN Obligatorio.Alquila A ON A.Documento = C.Documento
+       INNER JOIN Obligatorio.Equipo E ON E.Id = A.Id
+       INNER JOIN Obligatorio.Contrata CT ON CT.Documento = C.Documento
+       INNER JOIN Obligatorio.Proyecto P ON p.NroProy= Ct.NroProy
+       INNER JOIN Obligatorio.Tarea T ON t.NroProy= P.NroProy
+       WHERE E.Categoria = 'Vial'
+       GROUP BY P.Nombre
+       HAVING COUNT(DISTINCT T.IdTarea) = (SELECT MAX(COUNT(DISTINCT T.IdTarea)) AS Cantidad
+                                           FROM Contacto C
+                                            INNER JOIN Alquila A ON A.Documento = C.Documento
+                                            INNER JOIN Equipo E ON E.Id = A.Id
+                                            INNER JOIN Contrata CT ON CT.Documento = C.Documento
+                                            INNER JOIN Proyecto P ON p.NroProy= Ct.NroProy
+                                            INNER JOIN Tarea T ON t.NroProy= P.NroProy
+                                            group by P.NroProy
+                                            ))
+         WHEN E.Categoria = 'Construccion' THEN
+       (SELECT P.Nombre
+       FROM Contacto C
+       INNER JOIN Alquila A ON A.Documento = C.Documento
+       INNER JOIN Equipo E ON E.Id = A.Id
+       INNER JOIN Contrata CT ON CT.Documento = C.Documento
+       INNER JOIN Proyecto P ON P.NroProy = CT.NroProy
+       INNER JOIN Tarea T ON T.NroProy = P.NroProy
+       WHERE E.Categoria = 'Construccion'
+       GROUP BY P.Nombre
+       HAVING COUNT(DISTINCT T.IdTarea) = (SELECT MAX(COUNT(DISTINCT T.IdTarea)) AS Cantidad
+       FROM Contacto C
+       INNER JOIN Alquila A ON A.Documento = C.Documento
+       INNER JOIN Equipo E ON E.Id = A.Id
+       INNER JOIN Contrata CT ON CT.Documento = C.Documento
+       INNER JOIN Proyecto P ON P.NroProy = CT.NroProy
+       INNER JOIN Tarea T ON T.NroProy = P.NroProy
+        group by p.NroProy))
+END) AS NombreProy
+FROM Contacto C
+INNER JOIN Alquila A ON A.Documento = C.Documento
+INNER JOIN Equipo E ON E.Id = A.Id
+INNER JOIN Contrata CT ON CT.Documento = C.Documento
+INNER JOIN Proyecto P ON p.NroProy = ct.NroProy
+INNER JOIN Tarea T ON t.NroProy = p.NroProy
+group by a.id, P.Nombre, E.Categoria, C.Documento, C.Nombre;
